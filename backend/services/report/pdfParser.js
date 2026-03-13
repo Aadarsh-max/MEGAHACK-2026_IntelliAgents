@@ -1,14 +1,30 @@
 import fs from "fs";
-import pdfParse from "pdf-parse";
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 
 const pdfParser = async (filePath) => {
   try {
-    const dataBuffer = fs.readFileSync(filePath);
-    const data = await pdfParse(dataBuffer);
+    const data = new Uint8Array(fs.readFileSync(filePath));
 
-    return data.text;
+    const pdf = await pdfjs.getDocument({ data }).promise;
+
+    let text = "";
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+
+      const content = await page.getTextContent();
+
+      const strings = content.items.map((item) => item.str);
+
+      text += strings.join(" ") + "\n";
+    }
+
+    console.log("PDF TEXT EXTRACTED:", text.slice(0, 500));
+
+    return text;
   } catch (error) {
-    throw new Error("PDF parsing failed");
+    console.error("PDF parsing failed:", error);
+    return "";
   }
 };
 
